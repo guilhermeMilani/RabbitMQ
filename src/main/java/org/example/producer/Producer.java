@@ -19,6 +19,15 @@ public class Producer {
                 String routingKey = scanner.nextLine();
                 if ("sair".equalsIgnoreCase(routingKey)) break;
 
+                while (!"notificacao.ar".equalsIgnoreCase(routingKey) && !"notificacao.luz".equalsIgnoreCase(routingKey)) {
+                    System.out.print("Digitação errada, tente novamente ou saia: ");
+                    routingKey = scanner.nextLine();
+
+                    if ("sair".equalsIgnoreCase(routingKey)) break;
+                }
+
+                if ("sair".equalsIgnoreCase(routingKey)) break;
+
                 System.out.print("digite a mensagem: ");
                 String message = scanner.nextLine();
 
