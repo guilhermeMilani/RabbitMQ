@@ -5,13 +5,10 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DeliverCallback;
 import org.example.config.RabbitConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
 public class RetryConsumer {
-    private static final Logger logger = LoggerFactory.getLogger(RetryConsumer.class);
 
     private static final String RETRY_QUEUE = "Fila.Retry";
     private static final String MAIN_EXCHANGE = "exchange.topic";
@@ -21,7 +18,6 @@ public class RetryConsumer {
         Channel channel = connection.createChannel();
 
         DeliverCallback callback = (consumerTag, delivery) -> {
-            String msg = new String(delivery.getBody(), "UTF-8");
             Map<String, Object> headers = delivery.getProperties().getHeaders();
 
             int retryCount = headers != null && headers.containsKey("x-retry-count")
@@ -29,7 +25,7 @@ public class RetryConsumer {
                     : 0;
 
             if (retryCount >= 5) {
-                logger.error("mensagem falhou após 5 tentativas: {}", msg);
+                System.out.println("mensagem falhou após 5 tentativas");
                 channel.basicReject(delivery.getEnvelope().getDeliveryTag(), false);
                 return;
             }
@@ -39,8 +35,6 @@ public class RetryConsumer {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-
-            logger.warn("reenviando mensagem, tentativa {}: {}", retryCount + 1, msg);
 
             AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
                     .headers(Map.of("x-retry-count", retryCount + 1))
@@ -56,6 +50,5 @@ public class RetryConsumer {
 
         channel.basicConsume(RETRY_QUEUE, false, callback, consumerTag -> {
         });
-        logger.info("retry iniciado, monitorando fila: {}", RETRY_QUEUE);
     }
 }
