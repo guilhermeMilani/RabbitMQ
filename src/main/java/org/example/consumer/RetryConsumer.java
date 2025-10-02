@@ -18,6 +18,7 @@ public class RetryConsumer {
         Channel channel = connection.createChannel();
 
         DeliverCallback callback = (consumerTag, delivery) -> {
+            String msg = new String(delivery.getBody(),"UTF-8").toLowerCase();
             Map<String, Object> headers = delivery.getProperties().getHeaders();
 
             int retryCount = headers != null && headers.containsKey("x-retry-count")
@@ -28,6 +29,19 @@ public class RetryConsumer {
                 System.out.println("mensagem falhou após 5 tentativas");
                 channel.basicReject(delivery.getEnvelope().getDeliveryTag(), false);
                 return;
+            }
+
+            String routingKey = delivery.getEnvelope().getRoutingKey();
+
+
+            if ("retry.falha.ar".equals(routingKey)) {
+                msg = "ligar";
+                routingKey = "notificacao.ar";
+                System.out.println("Falha AR convertida para comando real: " + msg);
+            } else if ("retry.falha.luz".equals(routingKey)) {
+                msg = "ligar";
+                routingKey = "notificacao.luz";
+                System.out.println("Falha LUZ convertida para comando real: " + msg);
             }
 
             try {
@@ -41,9 +55,9 @@ public class RetryConsumer {
                     .build();
 
             channel.basicPublish(MAIN_EXCHANGE,
-                    delivery.getEnvelope().getRoutingKey(),
+                    routingKey,
                     props,
-                    delivery.getBody());
+                    msg.getBytes());
 
             channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
         };

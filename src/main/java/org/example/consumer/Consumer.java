@@ -1,6 +1,5 @@
 package org.example.consumer;
 
-import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DeliverCallback;
@@ -19,36 +18,53 @@ public class Consumer {
         DeliverCallback callback = (consumerTag, delivery) -> {
             String msg = new String(delivery.getBody(), "UTF-8");
             try {
-                if (QUEUE_LUZ.equals(delivery.getEnvelope().getRoutingKey())
-                        || msg.toLowerCase().contains("luz")) {
-                    System.out.println("luz ligada com sucesso, mensagem recebida:" + msg);
-                } else if (msg.toLowerCase().contains("ar")) {
-                    System.out.println("ar ligado com sucesso, mensagem recebida:" + msg);
+                if ("falha.ar".equals(delivery.getEnvelope().getRoutingKey())
+                        || "falha.luz".equals(delivery.getEnvelope().getRoutingKey())) {
+                    throw new RuntimeException("Mensagem forçada para falhar");
+                }
+                if ("notificacao.luz".equals(delivery.getEnvelope().getRoutingKey())) {
+                    if ("ligar".equals(msg)) {
+                        System.out.println("Luz ligada com sucesso!");
+                    } else if ("desligar".equals(msg)) {
+                        System.out.println("Luz desligada com sucesso!");
+                    } else {
+                        System.out.println("⚠Mensagem inválida para luz: " + msg);
+                    }
+
+                } else if ("notificacao.ar".equals(delivery.getEnvelope().getRoutingKey())) {
+                    if ("ligar".equals(msg)) {
+                        System.out.println("❄Ar-condicionado ligado com sucesso!");
+                    } else if ("desligar".equals(msg)) {
+                        System.out.println("❄Ar-condicionado desligado com sucesso!");
+                    } else {
+                        System.out.println("⚠Mensagem inválida para ar-condicionado: " + msg);
+                    }
                 }
 
                 channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
             } catch (Exception e) {
-                int retryCount = delivery.getProperties().getHeaders() != null &&
-                        delivery.getProperties().getHeaders().containsKey("x-retry-count")
-                        ? (int) delivery.getProperties().getHeaders().get("x-retry-count") : 0;
+                Map<String, Object> headers = delivery.getProperties().getHeaders();
+                int retryCount = 0;
+                if (headers != null && headers.get("x-retry-count") != null) {
+                    retryCount = (int) headers.get("x-retry-count");
+                }
 
                 if (retryCount >= 5) {
                     System.out.println("A mensagem falhou mais de 5 vezes");
                     channel.basicReject(delivery.getEnvelope().getDeliveryTag(), false);
                 } else {
-                    AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
-                            .headers(Map.of("x-retry-count", retryCount + 1))
-                            .build();
-
+                    Map<String, Object> newHeaders = Map.of("x-retry-count", retryCount + 1);
                     channel.basicPublish("exchange.retry",
                             "retry." + delivery.getEnvelope().getRoutingKey(),
-                            props,
+                            new com.rabbitmq.client.AMQP.BasicProperties.Builder()
+                                    .headers(newHeaders)
+                                    .build(),
                             delivery.getBody());
 
                     channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
                 }
             }
-        };
+         };
 
         channel.basicConsume(QUEUE_LUZ, false, callback, consumerTag -> {
         });
