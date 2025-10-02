@@ -19,7 +19,11 @@ public class Producer {
                 String routingKey = scanner.nextLine();
                 if ("sair".equalsIgnoreCase(routingKey)) break;
 
-                while (!"notificacao.ar".equalsIgnoreCase(routingKey) && !"notificacao.luz".equalsIgnoreCase(routingKey)) {
+                while (!"notificacao.ar".equalsIgnoreCase(routingKey)
+                        && !"notificacao.luz".equalsIgnoreCase(routingKey)
+                        && !"falha.luz".equalsIgnoreCase(routingKey)
+                        && !"falha.ar".equalsIgnoreCase(routingKey)) {
+
                     System.out.print("Digitação errada, tente novamente ou saia: ");
                     routingKey = scanner.nextLine();
 
@@ -28,9 +32,21 @@ public class Producer {
 
                 if ("sair".equalsIgnoreCase(routingKey)) break;
 
-                System.out.print("digite a mensagem: ");
-                String message = scanner.nextLine();
+                String message = "";
 
+                if (routingKey.toLowerCase().startsWith("falha")) {
+                    message = "falha";
+                }else {
+                    while (true) {
+                        System.out.print("digite a ação (ligar/desligar): ");
+                        message = scanner.nextLine().toLowerCase();
+                        if ("ligar".equals(message) || "desligar".equals(message)) {
+                            break;
+                        } else {
+                            System.out.println("Ação inválida! Só pode 'ligar' ou 'desligar'. Tente de novo.");
+                        }
+                    }
+                }
                 channel.basicPublish("exchange.topic", routingKey, null, message.getBytes());
                 System.out.println("chave: " + routingKey + " mensagem: " + message);
             }

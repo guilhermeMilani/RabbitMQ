@@ -36,6 +36,8 @@ public class RabbitConfig {
         channel.queueBind("Fila.AcionamentosLuz", "exchange.topic", "notificacao.luz");
         channel.queueBind("Fila.AcionamentosAr", "exchange.topic", "notificacao.ar");
         channel.queueBind("Fila.Notificacao", "exchange.topic", "notificacao.*");
+        channel.queueBind("Fila.AcionamentosLuz", "exchange.topic", "falha.luz");
+        channel.queueBind("Fila.AcionamentosAr", "exchange.topic", "falha.ar");
 
         channel.queueBind("Fila.Retry", "exchange.retry", "retry.*");
     }
